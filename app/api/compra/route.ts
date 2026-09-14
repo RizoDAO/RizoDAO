@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
 // Reglas de descuento por tokens
-export const REGLAS_DESCUENTO = [
+const REGLAS_DESCUENTO = [
   { tokens: 1000, tipo: "envio_gratis", label: "Envío gratis" },
   { tokens: 500, tipo: "descuento_10", label: "10% de descuento" },
 ] as const;
