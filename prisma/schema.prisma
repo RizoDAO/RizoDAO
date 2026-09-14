@@ -15,6 +15,7 @@ model User {
   role                Role     @default(RIZADA)
   tokens              Int      @default(0)
   hairType            String?
+  curlType            String?
   avatar              String?
   bio                 String?
   verified            Boolean  @default(false)
