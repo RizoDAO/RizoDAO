@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Gift, ExternalLink } from "lucide-react";
+import { useCartStore } from "@/store/cartStore";
 
 type ResultadoPago = {
   txHash: string;
@@ -18,18 +19,26 @@ const CONTRACT_ID = process.env.NEXT_PUBLIC_LOYALTY_CONTRACT_ID ?? "";
 
 export default function PagoExitosoPage() {
   const router = useRouter();
+  const pagoExitosoState = useCartStore((state) => state.pagoExitoso);
   const [resultado, setResultado] = useState<ResultadoPago | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("pagoExitoso");
-    if (stored) {
-      const data = JSON.parse(stored);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && pagoExitosoState) {
+      const data = { ...pagoExitosoState };
       // Compatibilidad con datos guardados antes del cambio (precioUSDC)
       if (!data.precioMXN && data.precioUSDC) {
         data.precioMXN = Math.round(data.precioUSDC * 19);
       }
       setResultado(data);
     }
+  }, [mounted, pagoExitosoState]);
+
+  useEffect(() => {
 
     // Confetti café/beige
     let cancelled = false;
