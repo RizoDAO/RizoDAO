@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAccesly } from "accesly";
 import { ArrowLeft, ShoppingBag, AlertCircle, CreditCard, X, Wallet } from "lucide-react";
+import { useCartStore } from "@/store/cartStore";
 
 const MXN_PER_USDC = 19;
 
@@ -21,6 +22,10 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { wallet, connect } = useAccesly();
+
+  const cartProducto = useCartStore((state) => state.productoSeleccionado);
+  const setPagoExitoso = useCartStore((state) => state.setPagoExitoso);
+  const clearCart = useCartStore((state) => state.clearCart);
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [saldoUSDC, setSaldoUSDC] = useState(0);
@@ -52,14 +57,20 @@ export default function CheckoutPage() {
     : 0;
   const tienesSaldo = producto ? saldoMXN >= precioConDescuento : false;
 
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    const stored = sessionStorage.getItem("productoSeleccionado");
-    if (stored) {
-      setProducto(JSON.parse(stored));
-    } else {
-      router.replace("/tienda");
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      if (cartProducto) {
+        setProducto(cartProducto);
+      } else {
+        router.replace("/tienda");
+      }
     }
-  }, [router]);
+  }, [mounted, cartProducto, router]);
 
   // Cargar saldo interno del usuario
   useEffect(() => {
@@ -137,18 +148,16 @@ export default function CheckoutPage() {
         return;
       }
 
-      sessionStorage.setItem(
-        "pagoExitoso",
-        JSON.stringify({
-          txHash: data.txHash,
-          txOnChain: data.txOnChain,
-          producto: producto.nombre,
-          precioMXN: precioConDescuento,
-          precioOriginal: producto.precioMXN,
-          descuentoAplicado: descuentoEfectivo,
-          tokens: data.tokensGanados,
-        })
-      );
+      setPagoExitoso({
+        txHash: data.txHash,
+        txOnChain: data.txOnChain,
+        producto: producto.nombre,
+        precioMXN: precioConDescuento,
+        precioOriginal: producto.precioMXN,
+        descuentoAplicado: descuentoEfectivo,
+        tokens: data.tokensGanados,
+      });
+      clearCart();
 
       router.push("/pago-exitoso");
     } catch {

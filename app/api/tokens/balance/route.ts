@@ -1,24 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateSearchParams, tokenBalanceSchema } from "@/lib/validations";
 
 const prisma = new PrismaClient();
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
+
+  // Validate query params
+  const { data: params, error: valError } = validateSearchParams(
+    req,
+    tokenBalanceSchema
+  );
+  if (valError) return valError;
+
   try {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get("email");
-
-    if (!email) {
-      return NextResponse.json({ error: "Email requerido" }, { status: 400 });
-    }
-
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: params!.email },
       select: { tokens: true },
     });
 
     if (!user) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ tokens: user.tokens });

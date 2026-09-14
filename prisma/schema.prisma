@@ -30,6 +30,9 @@ model User {
   reviews       Review[]
   purchases     Purchase[]
   discountCodes DiscountCode[]
+
+  @@index([createdAt])
+  @@index([stellarPublicKey])
 }
 
 model Purchase {
@@ -42,6 +45,8 @@ model Purchase {
   tokensGanados Int
   stellarTxHash String
   createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Post {
@@ -52,6 +57,9 @@ model Post {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes     Int      @default(0)
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Product {
@@ -81,6 +89,9 @@ model Review {
   content   String?
   curlType  String
   createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
 }
 
 model TokenTransaction {
@@ -92,6 +103,8 @@ model TokenTransaction {
   reason          String
   stellarTxHash   String?
   createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model DiscountCode {
@@ -121,6 +134,8 @@ model Appointment {
   status       String   @default("pending")
   stellarTxHash String?
   createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 enum Role {
