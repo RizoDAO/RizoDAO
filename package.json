@@ -34,7 +34,8 @@
     "react-leaflet": "^5.0.0",
     "stream-browserify": "^3.0.0",
     "ws": "^8.19.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
