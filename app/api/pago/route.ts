@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { decryptSecret } from "@/lib/encryption";
 import { registerPurchase } from "@/lib/loyaltyContract";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateBody, pagoSchema } from "@/lib/validations";
 
 const prisma = new PrismaClient();
 
@@ -11,15 +13,26 @@ const server = new StellarSdk.Horizon.Server(HORIZON_URL);
 const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const USDC = new StellarSdk.Asset("USDC", USDC_ISSUER);
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
+
+  // Validate body
+  const { data, error: valError } = await validateBody(req, pagoSchema);
+  if (valError) return valError;
+
+  const {
+    userEmail,
+    productName,
+    precioUSDC,
+    tokensGanados,
+    paymentAsset,
+    precioXLM,
+    discountCode,
+  } = data!;
+
   try {
-    const { userEmail, productName, precioUSDC, tokensGanados, paymentAsset = "USDC", precioXLM, discountCode } =
-      await req.json();
-
-    if (!userEmail || !productName) {
-      return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
-    }
-
     const user = await prisma.user.findUnique({ where: { email: userEmail } });
 
     if (!user) {
@@ -39,13 +52,17 @@ export async function POST(req: Request) {
     // Intentar pago real en Stellar Testnet si el usuario tiene secret key
     if (user.stellarSecretKey && user.stellarPublicKey) {
       try {
-        const keypair = StellarSdk.Keypair.fromSecret(decryptSecret(user.stellarSecretKey));
+        const keypair = StellarSdk.Keypair.fromSecret(
+          decryptSecret(user.stellarSecretKey)
+        );
         const account = await server.loadAccount(keypair.publicKey());
 
-        const pagoAsset = paymentAsset === "XLM" ? StellarSdk.Asset.native() : USDC;
-        const pagoAmount = paymentAsset === "XLM"
-          ? Number(precioXLM).toFixed(7)
-          : Number(precioUSDC).toFixed(7);
+        const pagoAsset =
+          paymentAsset === "XLM" ? StellarSdk.Asset.native() : USDC;
+        const pagoAmount =
+          paymentAsset === "XLM"
+            ? Number(precioXLM).toFixed(7)
+            : Number(precioUSDC).toFixed(7);
 
         const tx = new StellarSdk.TransactionBuilder(account, {
           fee: StellarSdk.BASE_FEE,
@@ -67,13 +84,14 @@ export async function POST(req: Request) {
         txHash = result.hash;
         txOnChain = true;
       } catch (stellarErr: any) {
-        // En testnet el usuario probablemente no tiene USDC — es esperado
-        // Registramos la compra igual (demo mode)
-        const resultCodes = stellarErr?.response?.data?.extras?.result_codes;
+        const resultCodes =
+          stellarErr?.response?.data?.extras?.result_codes;
         console.log(
           "[Pago Stellar] fallback a demo —",
           stellarErr?.message ?? stellarErr,
-          resultCodes ? `| result_codes: ${JSON.stringify(resultCodes)}` : ""
+          resultCodes
+            ? `| result_codes: ${JSON.stringify(resultCodes)}`
+            : ""
         );
       }
     }
@@ -106,11 +124,16 @@ export async function POST(req: Request) {
       },
     });
 
-    // Registrar compra en contrato Soroban (fire-and-forget, no bloquea la respuesta)
-    if (user.stellarSecretKey && user.stellarPublicKey && process.env.LOYALTY_CONTRACT_ID) {
+    // Registrar compra en contrato Soroban (fire-and-forget)
+    if (
+      user.stellarSecretKey &&
+      user.stellarPublicKey &&
+      process.env.LOYALTY_CONTRACT_ID
+    ) {
       const decryptedSecret = decryptSecret(user.stellarSecretKey);
-      registerPurchase(decryptedSecret, tokensGanados * 10)
-        .catch((err) => console.error("[loyalty] register_purchase falló:", err));
+      registerPurchase(decryptedSecret, tokensGanados * 10).catch((err) =>
+        console.error("[loyalty] register_purchase falló:", err)
+      );
     }
 
     // Invalidar código de descuento si fue usado en esta compra

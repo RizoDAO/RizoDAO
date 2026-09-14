@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateSearchParams, discountValidateSchema } from "@/lib/validations";
 
 const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get("code");
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
 
-  if (!code) {
-    return NextResponse.json({ error: "Codigo requerido" }, { status: 400 });
-  }
+  // Validate query params
+  const { data: params, error: valError } = validateSearchParams(
+    req,
+    discountValidateSchema
+  );
+  if (valError) return valError;
+
+  const code = params!.code;
 
   try {
     const discountCode = await prisma.discountCode.findUnique({
@@ -23,15 +32,24 @@ export async function GET(req: NextRequest) {
     });
 
     if (!discountCode) {
-      return NextResponse.json({ valid: false, error: "Codigo no encontrado" });
+      return NextResponse.json({
+        valid: false,
+        error: "Codigo no encontrado",
+      });
     }
 
     if (discountCode.used) {
-      return NextResponse.json({ valid: false, error: "Este codigo ya fue utilizado" });
+      return NextResponse.json({
+        valid: false,
+        error: "Este codigo ya fue utilizado",
+      });
     }
 
     if (new Date() > discountCode.expiresAt) {
-      return NextResponse.json({ valid: false, error: "Este codigo ha expirado" });
+      return NextResponse.json({
+        valid: false,
+        error: "Este codigo ha expirado",
+      });
     }
 
     return NextResponse.json({
