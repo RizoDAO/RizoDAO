@@ -79,6 +79,7 @@ model Review {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   rating    Int
   content   String?
+  curlType  String
   createdAt DateTime @default(now())
 }
 
