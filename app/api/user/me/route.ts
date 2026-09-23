@@ -6,12 +6,13 @@ const prisma = new PrismaClient();
 export async function GET(req: NextRequest) {
   try {
     const email = req.nextUrl.searchParams.get("email");
-    if (!email) {
-      return NextResponse.json({ error: "Email requerido" }, { status: 400 });
+    const id = req.nextUrl.searchParams.get("id");
+    if (!email && !id) {
+      return NextResponse.json({ error: "Email o id requerido" }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: id ? { id } : { email: email as string },
       select: {
         id: true,
         email: true,
