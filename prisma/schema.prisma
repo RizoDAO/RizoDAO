@@ -32,6 +32,10 @@ model User {
   discountCodes DiscountCode[]
   following     Follow[] @relation("FollowFollower")
   followers     Follow[] @relation("FollowFollowing")
+
+  @@index([createdAt])
+  @@index([stellarPublicKey])
+
 }
 
 model Purchase {
@@ -44,6 +48,8 @@ model Purchase {
   tokensGanados Int
   stellarTxHash String
   createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Post {
@@ -54,6 +60,9 @@ model Post {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes     Int      @default(0)
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Product {
@@ -75,13 +84,21 @@ model Product {
 
 model Review {
   id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?
+  content   String?
+  curlType  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  rating    Int
-  content   String?
-  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([userId])
 }
 
 model TokenTransaction {
@@ -93,6 +110,8 @@ model TokenTransaction {
   reason          String
   stellarTxHash   String?
   createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model DiscountCode {
@@ -122,6 +141,8 @@ model Appointment {
   status       String   @default("pending")
   stellarTxHash String?
   createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Follow {

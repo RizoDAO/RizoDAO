@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateBody, earnSchema } from "@/lib/validations";
 
 const prisma = new PrismaClient();
 
@@ -11,20 +13,26 @@ const REGLAS_EARN: Record<string, number> = {
   navegacion: 3,
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
+
+  // Validate body
+  const { data, error: valError } = await validateBody(req, earnSchema);
+  if (valError) return valError;
+
+  const { userEmail, accion } = data!;
+
   try {
-    const { userEmail, accion } = await req.json() as {
-      userEmail: string;
-      accion: keyof typeof REGLAS_EARN;
-    };
-
-    if (!userEmail || !accion || !(accion in REGLAS_EARN)) {
-      return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { email: userEmail } });
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
     if (!user) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      );
     }
 
     const cantidad = REGLAS_EARN[accion];
