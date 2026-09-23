@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Producto = {
   id: number;
@@ -16,9 +17,13 @@ type Producto = {
 
 export default function ProductCard({ producto }: { producto: Producto }) {
   const [votado, setVotado] = useState<null | "bueno" | "malo">(null);
+  const router = useRouter();
 
   return (
-    <div className="bg-white rounded-2xl border border-[#D7CCC8] overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      onClick={() => router.push(`/tienda/${producto.id}`)}
+      className="bg-white rounded-2xl border border-[#D7CCC8] overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+    >
 
       {/* Imagen placeholder */}
       <div className="w-full h-44 flex items-center justify-center"
