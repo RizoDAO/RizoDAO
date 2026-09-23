@@ -2,6 +2,7 @@
 import { AcceslyProvider, useAccesly } from "accesly";
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { migrateGuestProfile } from "@/lib/guestCurlProfile";
 
 function AuthHandler({ children }: { children: React.ReactNode }) {
   const { wallet } = useAccesly();
@@ -28,7 +29,11 @@ function AuthHandler({ children }: { children: React.ReactNode }) {
         }),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then(async (data) => {
+          // Migrate any quiz results the user completed as a guest
+          if (wallet.email) {
+            await migrateGuestProfile({ email: wallet.email });
+          }
           if (data.isNew) {
             router.push("/onboarding");
           } else {

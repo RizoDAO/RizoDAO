@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { migrateGuestProfile } from "@/lib/guestCurlProfile";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +27,9 @@ export default function LoginPage() {
         setError("Correo o contrasena incorrectos");
         return;
       }
+
+      // Migrate any quiz results the user completed as a guest
+      await migrateGuestProfile({ email });
 
       router.push("/comunidad");
     } catch {

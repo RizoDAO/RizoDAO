@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccesly } from "accesly";
 import { useSession } from "next-auth/react";
+import { saveGuestProfile, clearGuestProfile } from "@/lib/guestCurlProfile";
 
 const tiposCabello = [
   { id: "2a", titulo: "2A — Ondulado suave", desc: "Ondas ligeras en forma de S, cabello fino" },
@@ -59,19 +60,26 @@ export default function OnboardingFlow() {
     !nombre;
 
   const handleEmpezar = async () => {
-    // Obtener identidad: email de sesión, wallet, o userId de localStorage
-    const email = userEmail;
-    const userId = typeof window !== "undefined" ? localStorage.getItem("rizoUserId") : null;
-
-    console.log("[Onboarding] submit →", { email, userId, sessionStatus: status, nombre, rol, tipoCabello });
-
     if (!nombre.trim()) return;
+
+    // Collect the completed profile
+    const profileData = { nombre, bio, rol, tipoCabello };
+
+    // ── Guest path: no authenticated user ─────────────────────────────────────
+    // Save to localStorage so the data survives until they register or log in.
+    const email = userEmail;
+    const userId =
+      typeof window !== "undefined" ? localStorage.getItem("rizoUserId") : null;
+
     if (!email && !userId) {
-      console.warn("[Onboarding] Sin identidad de usuario — redirigiendo de todas formas");
+      saveGuestProfile(profileData);
+      // Redirect to the community page; the guest will see their profile
+      // data applied to their account once they sign up or log in.
       router.push("/comunidad");
       return;
     }
 
+    // ── Authenticated path: persist directly to DB ─────────────────────────────
     setGuardando(true);
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -82,10 +90,12 @@ export default function OnboardingFlow() {
       const res = await fetch("/api/user/update", {
         method: "POST",
         headers,
-        body: JSON.stringify({ nombre, bio, rol, tipoCabello }),
+        body: JSON.stringify(profileData),
       });
-      const data = await res.json().catch(() => ({}));
-      console.log("[Onboarding] respuesta API →", res.status, data);
+      await res.json().catch(() => ({}));
+      // If there was a guest profile stored from an earlier guest session,
+      // clear it now — the authoritative data is in the DB.
+      clearGuestProfile();
       router.push("/comunidad");
     } catch (error) {
       console.error("[Onboarding] error de red:", error);

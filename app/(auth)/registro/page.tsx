@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { migrateGuestProfile } from "@/lib/guestCurlProfile";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -37,6 +38,9 @@ export default function RegistroPage() {
         router.push("/login");
         return;
       }
+
+      // Migrate any quiz results the user completed as a guest
+      await migrateGuestProfile({ email });
 
       router.push("/onboarding");
     } catch {

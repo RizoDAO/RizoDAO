@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccesly } from "accesly";
 import { signIn } from "next-auth/react";
+import { migrateGuestProfile } from "@/lib/guestCurlProfile";
 
 type Props = {
   onClose: () => void;
@@ -30,6 +31,8 @@ export default function AuthModal({ onClose }: Props) {
         setError("Correo o contrasena incorrectos");
         return;
       }
+      // Migrate any quiz results the user completed as a guest
+      await migrateGuestProfile({ email });
       onClose();
       router.refresh();
       router.push("/comunidad");
