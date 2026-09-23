@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccesly } from "accesly";
 import { useSession } from "next-auth/react";
 
 const tiposCabello = [
@@ -23,9 +22,7 @@ const roles = [
 
 export default function OnboardingFlow() {
   const router = useRouter();
-  const { wallet } = useAccesly();
   const { data: session, status } = useSession();
-  const userEmail = wallet?.email || session?.user?.email || null;
   const [paso, setPaso] = useState(1);
   const [rol, setRol] = useState("");
   const [tipoCabello, setTipoCabello] = useState("");
@@ -59,30 +56,24 @@ export default function OnboardingFlow() {
     !nombre;
 
   const handleEmpezar = async () => {
-    // Obtener identidad: email de sesión, wallet, o userId de localStorage
-    const email = userEmail;
-    const userId = typeof window !== "undefined" ? localStorage.getItem("rizoUserId") : null;
-
-    console.log("[Onboarding] submit →", { email, userId, sessionStatus: status, nombre, rol, tipoCabello });
+    console.log("[Onboarding] submit →", { sessionStatus: status, nombre, rol, tipoCabello });
 
     if (!nombre.trim()) return;
-    if (!email && !userId) {
-      console.warn("[Onboarding] Sin identidad de usuario — redirigiendo de todas formas");
+    // El servidor identifica al usuario por la sesión; sin sesión no hay nada que guardar
+    if (!session?.user) {
+      console.warn("[Onboarding] Sin sesión — redirigiendo sin guardar el perfil");
       router.push("/comunidad");
       return;
     }
 
     setGuardando(true);
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (email)  headers["x-user-email"] = email;
-    if (userId) headers["x-user-id"]    = userId;
-
     try {
       const res = await fetch("/api/user/update", {
         method: "POST",
-        headers,
-        body: JSON.stringify({ nombre, bio, rol, tipoCabello }),
+        headers: { "Content-Type": "application/json" },
+        // Los ids de rol del UI están en minúsculas; el schema espera RIZADA | MARCA | ESTILISTA
+        body: JSON.stringify({ nombre, bio, rol: rol.toUpperCase(), tipoCabello }),
       });
       const data = await res.json().catch(() => ({}));
       console.log("[Onboarding] respuesta API →", res.status, data);

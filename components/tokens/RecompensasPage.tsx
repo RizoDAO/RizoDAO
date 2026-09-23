@@ -110,9 +110,15 @@ export default function RecompensasPage() {
       const res = await fetch("/api/tokens/canjear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userEmail, canjeType: canjeSeleccionado.type }),
+        body: JSON.stringify({ canjeType: canjeSeleccionado.type }),
       });
       const json = await res.json();
+
+      if (res.status === 401) {
+        setErrorCanje("Inicia sesión con tu correo para canjear tus tokens.");
+        setModalState("error");
+        return;
+      }
 
       if (res.status === 409) {
         // Ya tiene un código activo

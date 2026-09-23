@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/getAuthUser";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { validateBody, otorgarSchema } from "@/lib/validations";
-
-const prisma = new PrismaClient();
 
 const TOKENS_POR_ACCION: Record<string, number> = {
   PUBLICAR: 5,
@@ -18,11 +17,16 @@ export async function POST(req: NextRequest) {
   const rlError = checkRateLimit(req);
   if (rlError) return rlError;
 
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
   // Validate body
   const { data, error: valError } = await validateBody(req, otorgarSchema);
   if (valError) return valError;
 
-  const { userEmail, accion } = data!;
+  const { accion } = data!;
 
   try {
     const tokensAOtorgar = TOKENS_POR_ACCION[accion.toUpperCase()];
@@ -33,26 +37,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Actualizar tokens en BD
-    const user = await prisma.user.update({
-      where: { email: userEmail },
-      data: { tokens: { increment: tokensAOtorgar } },
-    });
-
-    // Registrar transacción
-    await prisma.tokenTransaction.create({
-      data: {
-        userId: user.id,
-        amount: tokensAOtorgar,
-        type: "GANADO",
-        reason: `${accion} en la plataforma`,
-      },
-    });
+    const [usuarioActualizado] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { tokens: { increment: tokensAOtorgar } },
+      }),
+      prisma.tokenTransaction.create({
+        data: {
+          userId: user.id,
+          amount: tokensAOtorgar,
+          type: "GANADO",
+          reason: `${accion} en la plataforma`,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
       tokensOtorgados: tokensAOtorgar,
-      totalTokens: user.tokens,
+      totalTokens: usuarioActualizado.tokens,
     });
   } catch (error) {
     console.error("Error otorgando tokens:", error);

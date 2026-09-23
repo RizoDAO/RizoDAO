@@ -75,17 +75,14 @@ export const tokenBalanceSchema = z.object({
 });
 
 export const canjearSchema = z.object({
-  userEmail: z.string().email("Email inválido"),
   canjeType: z.enum(["DESCUENTO_5", "DESCUENTO_10", "DESCUENTO_20"]),
 });
 
 export const earnSchema = z.object({
-  userEmail: z.string().email("Email inválido"),
   accion: z.enum(["post", "comentario", "resena", "perfil", "navegacion"]),
 });
 
 export const otorgarSchema = z.object({
-  userEmail: z.string().email("Email inválido"),
   accion: z.string().min(1, "Acción requerida"),
 });
 
