@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
         avatar: true,
         stellarPublicKey: true,
         onboardingCompleted: true,
+        latitude: true,
+        longitude: true,
         createdAt: true,
         _count: {
           select: { posts: true, reviews: true },

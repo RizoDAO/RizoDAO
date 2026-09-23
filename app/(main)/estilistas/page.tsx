@@ -1,5 +1,5 @@
-import ProfesionalesPage from "@/components/profesionales/ProfesionalesPage";
+import MapaEstilistas from "@/components/map/MapaEstilista";
 
 export default function EstilistasPage() {
-  return <ProfesionalesPage />;
+  return <MapaEstilistas />;
 }

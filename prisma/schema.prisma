@@ -21,6 +21,8 @@ model User {
   stellarPublicKey    String?
   stellarSecretKey    String?
   onboardingCompleted Boolean  @default(false)
+  latitude            Float?
+  longitude           Float?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

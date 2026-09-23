@@ -14,6 +14,8 @@ type UserProfile = {
   tokens: number;
   avatar: string | null;
   onboardingCompleted: boolean;
+  latitude: number | null;
+  longitude: number | null;
   _count: { posts: number; reviews: number };
 };
 
@@ -29,6 +31,89 @@ export default function PerfilPage() {
   const [tab, setTab] = useState<"publicaciones" | "resenas" | "guardados">("publicaciones");
   const [perfil, setPerfil] = useState<UserProfile | null>(null);
   const [cargando, setCargando] = useState(true);
+
+  // States for profile editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editLatitude, setEditLatitude] = useState("");
+  const [editLongitude, setEditLongitude] = useState("");
+  const [editCargandoUbicacion, setEditCargandoUbicacion] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const startEditing = () => {
+    setEditName(perfil?.name || "");
+    setEditBio(perfil?.bio || "");
+    setEditLatitude(perfil?.latitude !== null && perfil?.latitude !== undefined ? String(perfil.latitude) : "");
+    setEditLongitude(perfil?.longitude !== null && perfil?.longitude !== undefined ? String(perfil.longitude) : "");
+    setEditError(null);
+    setIsEditing(true);
+  };
+
+  const obtenerUbicacion = () => {
+    if (!navigator.geolocation) {
+      setEditError("La geolocalización no está soportada por tu navegador");
+      return;
+    }
+    setEditCargandoUbicacion(true);
+    setEditError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setEditLatitude(String(position.coords.latitude));
+        setEditLongitude(String(position.coords.longitude));
+        setEditCargandoUbicacion(false);
+      },
+      (error) => {
+        console.error(error);
+        setEditError("Error al obtener la ubicación. Introduce las coordenadas manualmente.");
+        setEditCargandoUbicacion(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleGuardar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGuardando(true);
+    setEditError(null);
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (userEmail) headers["x-user-email"] = userEmail;
+
+    try {
+      const res = await fetch("/api/user/update", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          nombre: editName,
+          bio: editBio,
+          rol: perfil?.role,
+          latitude: editLatitude ? parseFloat(editLatitude) : null,
+          longitude: editLongitude ? parseFloat(editLongitude) : null
+        }),
+      });
+
+      if (res.ok) {
+        setPerfil(prev => prev ? {
+          ...prev,
+          name: editName,
+          bio: editBio,
+          latitude: editLatitude ? parseFloat(editLatitude) : null,
+          longitude: editLongitude ? parseFloat(editLongitude) : null
+        } : null);
+        setIsEditing(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setEditError(data.error || "Error al actualizar el perfil");
+      }
+    } catch (error) {
+      console.error("Error al guardar perfil:", error);
+      setEditError("Error de conexión");
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const userEmail = session?.user?.email || wallet?.email;
   const userInicial = perfil?.name?.[0]?.toUpperCase() || userEmail?.[0]?.toUpperCase() || "?";
@@ -83,7 +168,10 @@ export default function PerfilPage() {
 
         {/* Boton editar */}
         <div className="absolute bottom-4 right-4">
-          <button className="bg-white border border-[#D7CCC8] text-[#4E342E] px-4 py-2 rounded-full text-xs font-medium hover:bg-[#FAF8F5] transition-colors">
+          <button 
+            onClick={startEditing}
+            className="bg-white border border-[#D7CCC8] text-[#4E342E] px-4 py-2 rounded-full text-xs font-medium hover:bg-[#FAF8F5] transition-colors"
+          >
             Editar perfil
           </button>
         </div>
@@ -110,6 +198,13 @@ export default function PerfilPage() {
             {perfil?.hairType && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#6D4C41]">
                 Tipo {perfil.hairType.toUpperCase()}
+              </span>
+            )}
+            {perfil?.role === "ESTILISTA" && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#6D4C41]">
+                📍 {perfil.latitude !== null && perfil.longitude !== null 
+                  ? `${perfil.latitude.toFixed(4)}, ${perfil.longitude.toFixed(4)}` 
+                  : "Sin ubicación"}
               </span>
             )}
           </div>
@@ -193,6 +288,108 @@ export default function PerfilPage() {
           <span className="text-4xl mb-4">🔖</span>
           <p className="text-sm font-semibold text-[#3E2723]">No tienes guardados aun</p>
           <p className="text-xs text-[#A1887F] mt-1">Guarda publicaciones y productos para verlos aqui</p>
+        </div>
+      )}
+
+      {/* Modal Editar Perfil */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 border border-[#D7CCC8] max-w-md w-full shadow-lg">
+            <h2 className="text-xl font-bold text-[#3E2723] mb-4" style={{ fontFamily: "var(--font-playfair)" }}>
+              Editar Perfil
+            </h2>
+            <form onSubmit={handleGuardar} className="flex flex-col gap-4">
+              {editError && (
+                <p className="text-xs text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  {editError}
+                </p>
+              )}
+              
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[#6D4C41]">Nombre</label>
+                <input 
+                  type="text" 
+                  value={editName} 
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-[#FAF8F5] border border-[#D7CCC8] rounded-xl px-3 py-2 text-sm text-[#3E2723] focus:outline-none focus:border-[#8D6E63] transition-colors" 
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[#6D4C41]">Biografía</label>
+                <textarea 
+                  value={editBio} 
+                  onChange={(e) => setEditBio(e.target.value)}
+                  rows={3}
+                  className="w-full bg-[#FAF8F5] border border-[#D7CCC8] rounded-xl px-3 py-2 text-sm text-[#3E2723] focus:outline-none focus:border-[#8D6E63] resize-none transition-colors" 
+                />
+              </div>
+
+              {perfil?.role === "ESTILISTA" && (
+                <div className="border-t border-[#EFEBE9] pt-4 mt-1 flex flex-col gap-3">
+                  <p className="text-xs font-bold text-[#3E2723]">Ubicación del Estilista</p>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium text-[#6D4C41]">Latitud</label>
+                      <input 
+                        type="number" 
+                        step="any"
+                        placeholder="e.g. 19.4326"
+                        value={editLatitude} 
+                        onChange={(e) => setEditLatitude(e.target.value)}
+                        className="w-full bg-[#FAF8F5] border border-[#D7CCC8] rounded-xl px-3 py-2 text-sm text-[#3E2723] focus:outline-none focus:border-[#8D6E63] transition-colors" 
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium text-[#6D4C41]">Longitud</label>
+                      <input 
+                        type="number" 
+                        step="any"
+                        placeholder="e.g. -99.1332"
+                        value={editLongitude} 
+                        onChange={(e) => setEditLongitude(e.target.value)}
+                        className="w-full bg-[#FAF8F5] border border-[#D7CCC8] rounded-xl px-3 py-2 text-sm text-[#3E2723] focus:outline-none focus:border-[#8D6E63] transition-colors" 
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={obtenerUbicacion}
+                    disabled={editCargandoUbicacion}
+                    className="w-full bg-[#FAF8F5] border border-[#D7CCC8] text-[#8D6E63] py-2 rounded-xl text-xs font-medium hover:bg-[#EFEBE9] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {editCargandoUbicacion ? (
+                      <span className="w-3.5 h-3.5 border-2 border-[#8D6E63] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span>📍</span>
+                    )}
+                    Usar mi ubicación actual
+                  </button>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end mt-4 border-t border-[#EFEBE9] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  disabled={guardando}
+                  className="px-4 py-2 border border-[#D7CCC8] text-xs text-[#6D4C41] rounded-full hover:bg-[#FAF8F5] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardando || !editName.trim()}
+                  className="px-5 py-2 bg-[#8D6E63] text-white text-xs font-medium rounded-full hover:bg-[#6D4C41] transition-colors disabled:opacity-50"
+                >
+                  {guardando ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

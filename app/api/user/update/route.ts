@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, bio, rol, tipoCabello } = await req.json();
+    const { nombre, bio, rol, tipoCabello, latitude, longitude } = await req.json();
     const userEmail = req.headers.get("x-user-email");
     const userId = req.headers.get("x-user-id");
 
@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
         hairType: tipoCabello || null,
         name: nombre || undefined,
         bio: bio || null,
+        latitude: latitude !== undefined ? (latitude === null ? null : parseFloat(latitude)) : undefined,
+        longitude: longitude !== undefined ? (longitude === null ? null : parseFloat(longitude)) : undefined,
         onboardingCompleted: true,
       },
     });
