@@ -3,20 +3,24 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { crearCuentaStellar, establecerTrustline } from "@/lib/stellar";
 import { encryptSecret } from "@/lib/encryption";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateBody, registroSchema } from "@/lib/validations";
+import { sendWelcomeEmail } from "@/lib/email";
 
 const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
+
+  // Validate body
+  const { data, error: valError } = await validateBody(req, registroSchema);
+  if (valError) return valError;
+
+  const { nombre, email, password } = data!;
+
   try {
-    const { nombre, email, password } = await req.json();
-
-    if (!nombre || !email || !password) {
-      return NextResponse.json(
-        { error: "Todos los campos son requeridos" },
-        { status: 400 }
-      );
-    }
-
     // Verificar si el email ya existe
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -49,6 +53,13 @@ export async function POST(req: NextRequest) {
         tokens: 20, // Tokens de bienvenida
       },
     });
+
+    // Un fallo del correo no debe impedir la respuesta de registro exitoso.
+    await sendWelcomeEmail({ to: user.email, name: user.name ?? nombre }).catch(
+      (error: unknown) => {
+        console.error("Error al enviar correo de bienvenida:", error);
+      }
+    );
 
     // Registrar tokens de bienvenida (guard contra duplicados)
     const yaExisteBienvenida = await prisma.tokenTransaction.findFirst({

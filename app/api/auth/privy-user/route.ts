@@ -1,17 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { crearCuentaStellar, establecerTrustline } from "@/lib/stellar";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateBody, privyUserSchema } from "@/lib/validations";
 
 const prisma = new PrismaClient();
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
+
+  // Validate body
+  const { data, error: valError } = await validateBody(req, privyUserSchema);
+  if (valError) return valError;
+
+  const { email, name } = data!;
+
   try {
-    const { email, name } = await req.json();
-
-    if (!email) {
-      return NextResponse.json({ error: "Email requerido" }, { status: 400 });
-    }
-
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {

@@ -73,7 +73,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-right">
-            <Link href="#" className="text-xs text-[#8D6E63] hover:underline">
+            <Link href="/olvide-password" className="text-xs text-[#8D6E63] hover:underline">
               Olvidaste tu contrasena?
             </Link>
           </div>

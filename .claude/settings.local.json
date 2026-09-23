@@ -33,7 +33,9 @@
       "Bash(cargo build:*)",
       "Bash(cargo test:*)",
       "Bash(xargs grep:*)",
-      "Bash(npx --no -- prisma generate)"
+      "Bash(npx --no -- prisma generate)",
+      "Bash(npm ls *)",
+      "Bash(npm -v)"
     ]
   }
 }
