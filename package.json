@@ -17,13 +17,13 @@
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/adapter-neon": "^7.5.0",
     "@prisma/client": "^5.22.0",
-    "@privy-io/react-auth": "^3.18.0",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^14.6.1",
     "@types/canvas-confetti": "^1.9.0",
     "accesly": "^0.2.5",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
+    "events": "^3.3.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.577.0",
     "next": "16.2.0",
@@ -32,9 +32,11 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",
-    "resend": "^6.22.1",
+    "resend": "^6.28.1",
     "stream-browserify": "^3.0.0",
-    "ws": "^8.19.0"
+    "ws": "^8.19.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

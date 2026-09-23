@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { MapPin, Star, Video, Calendar, Sparkles } from "lucide-react";
+import BookingForm, { BookingDetails } from "@/components/agenda/BookingForm";
 
 type Categoria = "Todos" | "Cabello";
 
@@ -153,6 +154,8 @@ const EMOJI_CATEGORIA: Record<Categoria, string> = {
 export default function ProfesionalesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaActiva, setCategoriaActiva] = useState<Categoria>("Todos");
+  const [profesionalParaCita, setProfesionalParaCita] = useState<Profesional | null>(null);
+  const [confirmation, setConfirmation] = useState("");
 
   const filtrados = profesionales.filter((p) => {
     const coincideBusqueda =
@@ -162,6 +165,10 @@ export default function ProfesionalesPage() {
       categoriaActiva === "Todos" || p.categoria === categoriaActiva;
     return coincideBusqueda && coincideCategoria;
   });
+
+  const handleBooked = (booking: BookingDetails) => {
+    setConfirmation(`Tu solicitud para el ${booking.date} a las ${booking.time} fue enviada a ${booking.stylistName}.`);
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
@@ -194,6 +201,13 @@ export default function ProfesionalesPage() {
           />
         </div>
 
+        {confirmation && (
+          <div role="status" className="mb-6 flex items-start justify-between gap-3 rounded-2xl border border-[#B7E4C7] bg-[#E1F5EE] px-4 py-3 text-sm text-[#0F6E56]">
+            <span><strong>Cita solicitada.</strong> {confirmation}</span>
+            <button onClick={() => setConfirmation("")} aria-label="Cerrar confirmación" className="font-bold leading-none">×</button>
+          </div>
+        )}
+
         {/* Filtros por categoría */}
         <div className="flex flex-wrap gap-2 mb-8">
           {CATEGORIAS.map((cat) => (
@@ -216,7 +230,7 @@ export default function ProfesionalesPage() {
         {filtrados.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filtrados.map((pro) => (
-              <TarjetaProfesional key={pro.id} profesional={pro} />
+              <TarjetaProfesional key={pro.id} profesional={pro} onBook={() => setProfesionalParaCita(pro)} />
             ))}
           </div>
         ) : (
@@ -248,11 +262,18 @@ export default function ProfesionalesPage() {
           </div>
         </div>
       </div>
+      {profesionalParaCita && (
+        <BookingForm
+          stylist={profesionalParaCita}
+          onClose={() => setProfesionalParaCita(null)}
+          onBooked={handleBooked}
+        />
+      )}
     </div>
   );
 }
 
-function TarjetaProfesional({ profesional: p }: { profesional: Profesional }) {
+function TarjetaProfesional({ profesional: p, onBook }: { profesional: Profesional; onBook: () => void }) {
   return (
     <div className="bg-white rounded-2xl border border-[#D7CCC8] overflow-hidden hover:shadow-md transition-shadow">
       <div className="p-6">
@@ -322,7 +343,7 @@ function TarjetaProfesional({ profesional: p }: { profesional: Profesional }) {
 
         {/* Acciones */}
         <div className="flex gap-3">
-          <button className="flex-1 flex items-center justify-center gap-2 bg-[#8D6E63] text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#6D4C41] transition-colors">
+          <button onClick={onBook} className="flex-1 flex items-center justify-center gap-2 bg-[#8D6E63] text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#6D4C41] transition-colors">
             <Calendar className="w-4 h-4" />
             Agendar cita
           </button>

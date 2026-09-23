@@ -63,12 +63,17 @@ export async function pagarConUSDC(
   });
 
   if (signResult.error) {
-    throw new Error(signResult.error.message ?? "Error al firmar la transacción");
+    throw new Error(
+      String(
+        (signResult.error as { message?: string }).message ??
+          "Error al firmar la transacción"
+      )
+    );
   }
 
   // Reconstruir tx firmada
   const signedTx = StellarSdk.TransactionBuilder.fromXDR(
-    signResult.signedTxXdr,
+    signResult.signedTxXdr!,
     NETWORK_PASSPHRASE
   );
 

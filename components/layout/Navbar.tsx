@@ -24,6 +24,8 @@ export default function Navbar() {
   const { data: session } = useSession();
 
   const estaLogueado = !!wallet || !!session?.user;
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const esProfesional = userRole === "ESTILISTA" || userRole === "PROFESIONAL";
   const userInicial = wallet?.email?.[0]?.toUpperCase()
     || session?.user?.name?.[0]?.toUpperCase()
     || "U";
@@ -62,6 +64,11 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
+            {esProfesional && (
+              <Link href="/agenda" className="text-sm text-[#4E342E] hover:text-[#8D6E63] transition-colors">
+                Mi agenda
+              </Link>
+            )}
           </div>
 
           {/* Derecha */}
@@ -125,6 +132,11 @@ export default function Navbar() {
                 {item.label}
               </Link>
             ))}
+            {esProfesional && (
+              <Link href="/agenda" className="text-sm text-[#4E342E]" onClick={() => setMenuOpen(false)}>
+                Mi agenda
+              </Link>
+            )}
             {estaLogueado ? (
               <button onClick={handleDesconectar}
                 className="text-sm text-[#8D6E63] text-left">

@@ -1,15 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { sendPurchaseConfirmationEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { validateBody, compraSchema } from "@/lib/validations";
 
 const prisma = new PrismaClient();
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
 // Reglas de descuento por tokens
-export const REGLAS_DESCUENTO = [
+const REGLAS_DESCUENTO = [
   { tokens: 1000, tipo: "envio_gratis", label: "Envío gratis" },
-  { tokens: 500,  tipo: "descuento_10", label: "10% de descuento" },
+  { tokens: 500, tipo: "descuento_10", label: "10% de descuento" },
 ] as const;
 
 /**
@@ -23,10 +25,7 @@ async function verificarTransaccion(
 ): Promise<boolean> {
   try {
     const server = new StellarSdk.Horizon.Server(HORIZON_URL);
-    const txRecord = await server
-      .transactions()
-      .transaction(txHash)
-      .call();
+    const txRecord = await server.transactions().transaction(txHash).call();
 
     if (!txRecord) return false;
 
@@ -40,13 +39,15 @@ async function verificarTransaccion(
       .forTransaction(txHash)
       .call();
 
-    const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+    const USDC_ISSUER =
+      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pagoUSDC = ops.records.find((op: any) =>
-      op.type === "payment" &&
-      op.asset_code === "USDC" &&
-      op.asset_issuer === USDC_ISSUER
+    const pagoUSDC = ops.records.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (op: any) =>
+        op.type === "payment" &&
+        op.asset_code === "USDC" &&
+        op.asset_issuer === USDC_ISSUER
     ) as Record<string, string> | undefined;
 
     if (!pagoUSDC) return false;
@@ -59,33 +60,36 @@ async function verificarTransaccion(
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Rate limit
+  const rlError = checkRateLimit(req);
+  if (rlError) return rlError;
+
+  // Validate body
+  const { data, error: valError } = await validateBody(req, compraSchema);
+  if (valError) return valError;
+
+  const {
+    walletAddress,
+    userEmail,
+    productName,
+    precioUSDC,
+    tokensGanados,
+    stellarTxHash,
+  } = data!;
+
   try {
-    const body = await req.json();
-    const {
-      walletAddress,
-      userEmail,
-      productName,
-      precioUSDC,
-      tokensGanados,
-      stellarTxHash,
-    } = body as {
-      walletAddress: string;
-      userEmail?: string;
-      productName: string;
-      precioUSDC: number;
-      tokensGanados: number;
-      stellarTxHash: string;
-    };
-
-    if (!walletAddress || !stellarTxHash || !productName) {
-      return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
-    }
-
     // Verificar que la tx sea real en Stellar Testnet
-    const txValida = await verificarTransaccion(stellarTxHash, walletAddress, precioUSDC);
+    const txValida = await verificarTransaccion(
+      stellarTxHash,
+      walletAddress,
+      precioUSDC
+    );
     if (!txValida) {
-      return NextResponse.json({ error: "Transacción inválida" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Transacción inválida" },
+        { status: 400 }
+      );
     }
 
     // Buscar usuario por email o walletAddress
@@ -94,7 +98,9 @@ export async function POST(req: Request) {
       user = await prisma.user.findUnique({ where: { email: userEmail } });
     }
     if (!user && walletAddress) {
-      user = await prisma.user.findFirst({ where: { stellarPublicKey: walletAddress } });
+      user = await prisma.user.findFirst({
+        where: { stellarPublicKey: walletAddress },
+      });
     }
 
     // Registrar la compra
@@ -165,6 +171,9 @@ export async function POST(req: Request) {
           tokensGanados,
           stellarTxHash,
           purchaseId: compra.id,
+        }).catch((error: unknown) => {
+          // Un fallo del correo no debe impedir la respuesta de compra exitosa.
+          console.error("[/api/compra] Error al enviar correo de confirmación:", error);
         });
       }
     }
@@ -180,6 +189,9 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[/api/compra] Error:", error);
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }

@@ -4,12 +4,11 @@
  * Each send* function swallows its own errors (logs and returns success:false)
  * so a failed email never breaks the registration/purchase/reset flow that triggered it.
  */
-
+import React from "react";
 import { Resend } from "resend";
-import { renderToStaticMarkup } from "react-dom/server";
-import WelcomeEmail from "@/components/emails/WelcomeEmail";
-import PurchaseConfirmation from "@/components/emails/PurchaseConfirmation";
-import ResetPasswordEmail from "@/components/emails/ResetPasswordEmail";
+import WelcomeEmail from "../components/emails/WelcomeEmail";
+import PurchaseConfirmation from "../components/emails/PurchaseConfirmation";
+import ResetPasswordEmail from "../components/emails/ResetPasswordEmail";
 
 let resendClient: Resend | null = null;
 
@@ -44,15 +43,11 @@ export async function sendWelcomeEmail(params: {
   name: string;
 }): Promise<SendResult> {
   try {
-    const html = renderToStaticMarkup(
-      WelcomeEmail({ name: params.name, appUrl: getAppUrl() })
-    );
-
     await getResendClient().emails.send({
       from: getEmailFrom(),
       to: params.to,
       subject: `¡Bienvenida a RIZO, ${params.name}!`,
-      html: `<!DOCTYPE html>${html}`,
+      react: <WelcomeEmail name={params.name} appUrl={getAppUrl()} />,
     });
 
     return { success: true };
@@ -72,23 +67,21 @@ export async function sendPurchaseConfirmationEmail(params: {
   purchaseId: string;
 }): Promise<SendResult> {
   try {
-    const html = renderToStaticMarkup(
-      PurchaseConfirmation({
-        name: params.name,
-        productName: params.productName,
-        precioUSDC: params.precioUSDC,
-        tokensGanados: params.tokensGanados,
-        stellarTxHash: params.stellarTxHash,
-        purchaseId: params.purchaseId,
-        explorerUrl: getExplorerUrl(params.stellarTxHash),
-      })
-    );
-
     await getResendClient().emails.send({
       from: getEmailFrom(),
       to: params.to,
       subject: `Compra confirmada: ${params.productName}`,
-      html: `<!DOCTYPE html>${html}`,
+      react: (
+        <PurchaseConfirmation
+          name={params.name}
+          productName={params.productName}
+          precioUSDC={params.precioUSDC}
+          tokensGanados={params.tokensGanados}
+          stellarTxHash={params.stellarTxHash}
+          purchaseId={params.purchaseId}
+          explorerUrl={getExplorerUrl(params.stellarTxHash)}
+        />
+      ),
     });
 
     return { success: true };
@@ -104,15 +97,11 @@ export async function sendPasswordResetEmail(params: {
   resetUrl: string;
 }): Promise<SendResult> {
   try {
-    const html = renderToStaticMarkup(
-      ResetPasswordEmail({ name: params.name, resetUrl: params.resetUrl })
-    );
-
     await getResendClient().emails.send({
       from: getEmailFrom(),
       to: params.to,
       subject: "Restablece tu contraseña de RIZO",
-      html: `<!DOCTYPE html>${html}`,
+      react: <ResetPasswordEmail name={params.name} resetUrl={params.resetUrl} />,
     });
 
     return { success: true };
