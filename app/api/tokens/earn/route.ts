@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/getAuthUser";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { validateBody, earnSchema } from "@/lib/validations";
-
-const prisma = new PrismaClient();
 
 const REGLAS_EARN: Record<string, number> = {
   post: 5,
@@ -18,23 +17,18 @@ export async function POST(req: NextRequest) {
   const rlError = checkRateLimit(req);
   if (rlError) return rlError;
 
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
   // Validate body
   const { data, error: valError } = await validateBody(req, earnSchema);
   if (valError) return valError;
 
-  const { userEmail, accion } = data!;
+  const { accion } = data!;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-    });
-    if (!user) {
-      return NextResponse.json(
-        { error: "Usuario no encontrado" },
-        { status: 404 }
-      );
-    }
-
     const cantidad = REGLAS_EARN[accion];
 
     const [usuarioActualizado] = await prisma.$transaction([

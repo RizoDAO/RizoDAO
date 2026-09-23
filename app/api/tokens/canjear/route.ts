@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/getAuthUser";
 import { generateDiscountCode } from "@/lib/generateCode";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { validateBody, canjearSchema } from "@/lib/validations";
-
-const prisma = new PrismaClient();
 
 const CANJE_CONFIG: Record<
   string,
@@ -32,24 +31,19 @@ export async function POST(req: NextRequest) {
   const rlError = checkRateLimit(req);
   if (rlError) return rlError;
 
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
   // Validate body
   const { data, error: valError } = await validateBody(req, canjearSchema);
   if (valError) return valError;
 
-  const { userEmail, canjeType } = data!;
+  const { canjeType } = data!;
   const config = CANJE_CONFIG[canjeType];
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-    });
-    if (!user) {
-      return NextResponse.json(
-        { error: "Usuario no encontrado" },
-        { status: 404 }
-      );
-    }
-
     if (user.tokens < config.tokens) {
       return NextResponse.json(
         { error: "Tokens insuficientes" },
