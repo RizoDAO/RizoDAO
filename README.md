@@ -1,15 +1,17 @@
 # 🌀 RIZO — Web3 Beauty Platform for the Latin Curly Hair Community
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
-![Stellar](https://img.shields.io/badge/Stellar-Network-7B7BF7?style=flat-square&logo=stellar)
-![Vercel](https://img.shields.io/badge/Deployed-Vercel-black?style=flat-square&logo=vercel)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)
-![Resend](https://img.shields.io/badge/Email-Resend-black?style=flat-square&logo=resend)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Stellar](https://img.shields.io/badge/Stellar-Network-7B7BF7?style=flat-square&logo=stellar)](https://stellar.org/)
+[![Vercel Deployment](https://img.shields.io/badge/Deployed-Vercel-black?style=flat-square&logo=vercel)](https://rizo-dao.vercel.app)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![Resend](https://img.shields.io/badge/Email-Resend-black?style=flat-square&logo=resend)](https://resend.com/)
 
 > Beauty meets Web3. Shop, connect with professionals, and earn  
 > on-chain loyalty tokens — powered by Stellar Network, invisibly.
+
+🌐 **Demo en vivo (Vercel):** [https://rizo-dao.vercel.app](https://rizo-dao.vercel.app)
 
 ---
 
@@ -48,7 +50,7 @@ The platform brings together three core pillars:
 | Payments & Tokens | USDC on Stellar Testnet + Custom Soulbound Tokens (SBT) |
 | Auth & Security | NextAuth v4, Accesly, bcrypt password hashing |
 | Communications | Resend (React Email components) |
-| Deployment | Vercel (CI/CD with Webpack build pipeline) |
+| Deployment | [Vercel Demo](https://rizo-dao.vercel.app) (CI/CD with Webpack build pipeline) |
 
 ---
 
