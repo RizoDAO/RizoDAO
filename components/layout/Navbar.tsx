@@ -8,6 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 const linksBase = [
   { label: "Comunidad",    href: "/comunidad" },
   { label: "Tienda",       href: "/tienda" },
+  { label: "Diagnóstico",  href: "/diagnostico" },
   { label: "Profesionales", href: "/estilistas" },
 ];
 
