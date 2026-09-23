@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useAccesly } from "accesly";
 import Link from "next/link";
+import CredentialsTab from "@/components/profile/CredentialsTab";
 
 type UserProfile = {
   id: string;
@@ -13,6 +14,7 @@ type UserProfile = {
   role: string;
   tokens: number;
   avatar: string | null;
+  stellarPublicKey: string | null;
   onboardingCompleted: boolean;
   _count: { posts: number; reviews: number };
 };
@@ -26,7 +28,9 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 export default function PerfilPage() {
   const { data: session } = useSession();
   const { wallet } = useAccesly();
-  const [tab, setTab] = useState<"publicaciones" | "resenas" | "guardados">("publicaciones");
+  const [tab, setTab] = useState<
+    "publicaciones" | "resenas" | "guardados" | "credenciales"
+  >("publicaciones");
   const [perfil, setPerfil] = useState<UserProfile | null>(null);
   const [cargando, setCargando] = useState(true);
 
@@ -34,9 +38,17 @@ export default function PerfilPage() {
   const userInicial = perfil?.name?.[0]?.toUpperCase() || userEmail?.[0]?.toUpperCase() || "?";
   const username = perfil?.email?.split("@")[0] || "";
   const roleInfo = ROLE_LABELS[perfil?.role ?? "RIZADA"] ?? ROLE_LABELS.RIZADA;
+  const tabs: Array<{ id: typeof tab; label: string }> = [
+    { id: "publicaciones", label: "Publicaciones" },
+    { id: "resenas", label: "Resenas" },
+    { id: "guardados", label: "Guardados" },
+    ...(perfil?.role === "ESTILISTA"
+      ? [{ id: "credenciales" as const, label: "Credenciales" }]
+      : []),
+  ];
 
   useEffect(() => {
-    if (!userEmail) { setCargando(false); return; }
+    if (!userEmail) return;
     fetch(`/api/user/me?email=${encodeURIComponent(userEmail)}`)
       .then((r) => r.json())
       .then((data) => { if (data.id) setPerfil(data); })
@@ -149,12 +161,8 @@ export default function PerfilPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white rounded-2xl p-1 border border-[#D7CCC8] mb-6">
-        {[
-          { id: "publicaciones", label: "Publicaciones" },
-          { id: "resenas", label: "Resenas" },
-          { id: "guardados", label: "Guardados" },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
+        {tabs.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
               backgroundColor: tab === t.id ? "#8D6E63" : "transparent",
@@ -194,6 +202,10 @@ export default function PerfilPage() {
           <p className="text-sm font-semibold text-[#3E2723]">No tienes guardados aun</p>
           <p className="text-xs text-[#A1887F] mt-1">Guarda publicaciones y productos para verlos aqui</p>
         </div>
+      )}
+
+      {tab === "credenciales" && perfil?.role === "ESTILISTA" && (
+        <CredentialsTab walletAddress={perfil?.stellarPublicKey} />
       )}
 
     </div>
