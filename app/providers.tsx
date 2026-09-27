@@ -2,6 +2,7 @@
 import { AcceslyProvider, useAccesly } from "accesly";
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { CartProvider } from "@/store/cartStore";
 
 function AuthHandler({ children }: { children: React.ReactNode }) {
   const { wallet } = useAccesly();
@@ -51,7 +52,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       network="testnet"
       theme="light"
     >
-      <AuthHandler>{children}</AuthHandler>
+      <CartProvider>
+        <AuthHandler>{children}</AuthHandler>
+      </CartProvider>
     </AcceslyProvider>
   );
 }
