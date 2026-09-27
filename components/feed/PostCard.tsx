@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 
 type Post = {
-  id: number;
+  id: string;
+  userId: string;
   autor: string;
   handle: string;
   avatar: string;
@@ -31,14 +33,14 @@ export default function PostCard({ post }: { post: Post }) {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <Link href={`/perfil?usuario=${post.userId}`} className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-full bg-[#D7CCC8] flex items-center justify-center text-lg font-bold text-[#8D6E63]"
             style={{ fontFamily: "var(--font-playfair)" }}>
             {post.avatar}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[#3E2723]">{post.autor}</span>
+              <span className="text-sm font-semibold text-[#3E2723] group-hover:underline">{post.autor}</span>
               {post.tipo !== "rizada" && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                   style={{ backgroundColor: badge.bg, color: badge.text }}>
@@ -48,7 +50,7 @@ export default function PostCard({ post }: { post: Post }) {
             </div>
             <span className="text-xs text-[#A1887F]">{post.handle} · {post.tiempo}</span>
           </div>
-        </div>
+        </Link>
         <button className="text-[#A1887F] hover:text-[#8D6E63] text-lg">···</button>
       </div>
 
