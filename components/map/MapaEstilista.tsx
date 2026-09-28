@@ -14,7 +14,29 @@ interface Stylist {
   disponible: boolean;
 }
 
-const ChangeView = ({ center, useMap }: { center: [number, number]; useMap: () => any }) => {
+type LeafletMapView = {
+  setView: (center: [number, number], zoom: number) => void;
+};
+
+type EstilistaApiRecord = {
+  id: string;
+  name?: string;
+  email: string;
+  hairType?: string | null;
+  bio?: string | null;
+  rating?: number;
+  reviewCount?: number;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+const ChangeView = ({
+  center,
+  useMap,
+}: {
+  center: [number, number];
+  useMap: () => LeafletMapView;
+}) => {
   const map = useMap();
   useEffect(() => {
     map.setView(center, 13);
@@ -27,7 +49,7 @@ export default function MapaEstilistas() {
   const [estilistas, setEstilistas] = useState<Stylist[]>([]);
   const [cargando, setCargando] = useState(true);
   const [userLocation, setUserLocation] = useState<[number, number]>([19.4326, -99.1332]); // CDMX fallback
-  const [leafletLib, setLeafletLib] = useState<any>(null);
+  const [leafletLib, setLeafletLib] = useState<typeof import("react-leaflet") | null>(null);
   const [estilistaParaCita, setEstilistaParaCita] = useState<Stylist | null>(null);
 
   // Fetch stylists from API
@@ -36,7 +58,7 @@ export default function MapaEstilistas() {
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          const mapped = data.map((u: any) => ({
+          const mapped = data.map((u: EstilistaApiRecord) => ({
             id: u.id,
             nombre: u.name || u.email.split("@")[0],
             handle: `@${u.email.split("@")[0]}`,
@@ -82,7 +104,7 @@ export default function MapaEstilistas() {
       import("leaflet"),
     ]).then(([reactLeaflet, L]) => {
       // Fix default Leaflet icon assets
-      delete (L.default.Icon.Default.prototype as any)._getIconUrl;
+      delete (L.default.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
       L.default.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -192,7 +214,10 @@ export default function MapaEstilistas() {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 {estilistas
-                  .filter((e) => e.lat !== null && e.lng !== null)
+                  .filter(
+                    (e): e is Stylist & { lat: number; lng: number } =>
+                      e.lat !== null && e.lng !== null
+                  )
                   .map((e) => (
                     <leafletLib.Marker 
                       key={e.id} 

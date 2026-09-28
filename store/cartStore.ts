@@ -12,7 +12,7 @@ export interface CartItem {
   price?: number;
   tokens?: number;
   quantity: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type ProductoCheckout = {
@@ -66,18 +66,33 @@ if (typeof window !== "undefined") {
     }
   });
 }
+/**
+ * The live store plus the legacy field and method names this adapter bridges.
+ * Older consumers still call `addItem`/`setProducto`/`limpiar`, so the adapter
+ * has to be able to see them even though `CartState` no longer declares them.
+ */
+type AdaptableCartStore = CartState & {
+  items?: CartItem[];
+  producto?: CartItem;
+  addItem?: (item: CartItem) => void;
+  addItems?: (items: CartItem[]) => void;
+  removeItem?: (id: string) => void;
+  limpiar?: () => void;
+  setProducto?: (item: CartItem) => void;
+};
+
 // Adapter para compatibilidad con componentes que importan { useCart }
 export function useCart(): {
   items: CartItem[];
   count: number;
-  addItem: (item: any) => void;
+  addItem: (item: CartItem) => void;
   addItems: (items: CartItem[]) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   clear: () => void;
   total: number;
 } {
-  const store = useCartStore() as any;
+  const store = useCartStore() as AdaptableCartStore;
   const items: CartItem[] =
     store?.items ?? (store?.producto ? [store.producto] : []);
 
@@ -91,8 +106,8 @@ export function useCart(): {
 
   return {
     items,
-    count: items.reduce((acc: number, item: any) => acc + (item?.quantity ?? 1), 0),
-    addItem: (item: any) => {
+    count: items.reduce((acc: number, item: CartItem) => acc + (item?.quantity ?? 1), 0),
+    addItem: (item: CartItem) => {
       if (typeof store?.addItem === "function") {
         store.addItem(item);
       } else if (typeof store?.setProducto === "function") {
@@ -119,7 +134,7 @@ export function useCart(): {
     },
     clearCart: clearFn,
     clear: clearFn,
-    total: items.reduce((acc: number, item: any) => {
+    total: items.reduce((acc: number, item: CartItem) => {
       const price = item?.precioMXN ?? item?.precioUSDC ?? item?.price ?? 0;
       const qty = item?.quantity ?? 1;
       return acc + price * qty;

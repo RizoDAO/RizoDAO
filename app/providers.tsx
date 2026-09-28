@@ -1,17 +1,19 @@
 "use client";
 
-import { AcceslyProvider, useAccesly } from "accesly";
+import { AcceslyProvider, useAccesly, type WalletInfo } from "accesly";
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { migrateGuestProfile } from "@/lib/guestCurlProfile";
 
-const AcceslyProviderAny = AcceslyProvider as any;
+const AcceslyProviderAny = AcceslyProvider as React.ComponentType<{
+  children?: React.ReactNode;
+}>;
 
 function AuthHandler({ children }: { children: React.ReactNode }) {
   const { wallet } = useAccesly();
   const router = useRouter();
   const pathname = usePathname();
-  const prevWallet = useRef<any>(null);
+  const prevWallet = useRef<WalletInfo | null>(null);
 
   useEffect(() => {
     const wasNull = prevWallet.current === null;

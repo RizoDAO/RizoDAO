@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Node.js (typecheck, lint, build)
+    runs-on: ubuntu-latest
+    # Dummy values only — never real secrets. They exist so Prisma client
+    # generation and the Next.js static build succeed without an external
+    # database or third-party services.
+    env:
+      DATABASE_URL: "postgresql://user:password@127.0.0.1:5432/rizo_ci?sslmode=disable"
+      NEXTAUTH_SECRET: "ci-dummy-nextauth-secret-not-a-real-secret"
+      NEXTAUTH_URL: "http://localhost:3000"
+      STELLAR_ENCRYPTION_KEY: "ci-dummy-stellar-encryption-key-0000"
+      RESEND_API_KEY: "re_ci_dummy_key_not_a_real_secret"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npx next build --webpack
+
+  contracts-sbt:
+    name: Rust / Soroban (rizo-sbt)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/rizo-sbt
+
+      - name: Run rizo-sbt tests
+        run: cargo test --manifest-path contracts/rizo-sbt/Cargo.toml
+
+  contracts-loyalty:
+    name: Rust / Soroban (rizo-loyalty)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/rizo-loyalty
+
+      - name: Run rizo-loyalty tests
+        run: cargo test --manifest-path contracts/rizo-loyalty/Cargo.toml

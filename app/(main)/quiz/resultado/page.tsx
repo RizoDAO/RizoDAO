@@ -45,16 +45,24 @@ function StepBadge({ num, label }: { num: number; label: string }) {
 function QuizResultadoContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const { addItems, count } = useCart() as any;
+  const { addItems, count } = useCart();
 
   const tipo = params.get("tipo") ?? "";
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
 
+  // Reset the spinner whenever the query changes. This runs during render
+  // (React's "adjust state when a value changes" pattern) rather than inside
+  // the effect, which would call setState synchronously and cascade renders.
+  const [prevTipo, setPrevTipo] = useState(tipo);
+  if (prevTipo !== tipo) {
+    setPrevTipo(tipo);
+    setLoading(true);
+  }
+
   useEffect(() => {
     if (!tipo) return;
-    setLoading(true);
     fetch(`/api/quiz/recommendations?hairType=${encodeURIComponent(tipo)}`)
       .then((r) => r.json())
       .then((data) => setProducts(data.products ?? []))

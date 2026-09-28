@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       take: 12,
     });
 
-    const filtered = products.filter((p: any) => {
+    const filtered = products.filter((p) => {
       if (!p.hairTypes) return true;
       const types = p.hairTypes.split(",").map((t: string) => t.trim().toUpperCase());
       return types.includes(hairType.toUpperCase());
