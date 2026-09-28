@@ -60,6 +60,8 @@ model Purchase {
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   walletAddress String?
+  /// Catalog snapshots for all products covered by this single payment.
+  items         Json     @default("[]")
   productName   String
   precioUSDC    Float
   tokensGanados Int

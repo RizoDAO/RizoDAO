@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag, Star, Loader2 } from "lucide-react";
 import ReviewSection from "@/components/tienda/ReviewSection";
 
+import { useCartStore, catalogToCart } from "@/store/cartStore";
+
 type ProductDetail = {
   id: string;
   name: string;
@@ -47,18 +49,7 @@ export default function ProductDetailPage() {
 
   const handleBuy = () => {
     if (!product) return;
-    sessionStorage.setItem(
-      "productoSeleccionado",
-      JSON.stringify({
-        id: product.id,
-        nombre: product.name,
-        marca: product.brandName,
-        precioMXN: Math.round(product.price * MXN_PER_USDC),
-        precioUSDC: product.price,
-        imagen: product.imageUrl ?? "",
-        tokens: product.tokenPrice,
-      })
-    );
+    useCartStore.getState().addItem(catalogToCart(product));
     router.push("/checkout");
   };
 

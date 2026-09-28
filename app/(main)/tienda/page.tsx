@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAccesly } from "accesly";
 import { Search, TrendingUp, Sparkles } from "lucide-react";
-import { useCartStore } from "@/store/cartStore";
+
 
 const NEXT_MILESTONE = 500;
 const MXN_PER_USDC = 19;
@@ -141,12 +141,10 @@ export default function TiendaPage() {
   );
   const tendencias = productos.filter((p) => p.tendencia);
 
-  const setProductoSeleccionado = useCartStore((state) => state.setProductoSeleccionado);
-
   const handleProductoClick = (producto: ProductoCheckout) => {
-      setProductoSeleccionado(producto);
-      router.push(`/tienda/${producto.id}`);
-    };
+
+    router.push(`/tienda/${producto.id}`);
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">

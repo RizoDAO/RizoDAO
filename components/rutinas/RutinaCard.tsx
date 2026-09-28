@@ -1,3 +1,7 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCartStore, catalogToCart } from "@/store/cartStore";
 import Link from "next/link";
 import { Rutina } from "@/lib/rutinas";
 
@@ -10,6 +14,29 @@ const formatSlug = (slug: string) =>
   slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
 export default function RutinaCard({ rutina, isSuggested = false }: Props) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const buyRoutine = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/products");
+      if (!response.ok) throw new Error();
+      const catalog: Parameters<typeof catalogToCart>[0][] = await response.json();
+      const products = rutina.productSlugs.map(slug => catalog.find(product => product.id === slug));
+      if (!products.length || products.some(product => !product)) {
+        setError("Algunos productos de esta rutina no están disponibles.");
+        return;
+      }
+      useCartStore.getState().addItems(products.map(product => catalogToCart(product!)));
+      router.push("/carrito");
+    } catch {
+      setError("No se pudo cargar la rutina. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div
       className={`bg-white rounded-3xl p-6 md:p-8 flex flex-col h-full transition-all ${
@@ -62,6 +89,11 @@ export default function RutinaCard({ rutina, isSuggested = false }: Props) {
         </ol>
       </div>
 
+      <button onClick={buyRoutine} disabled={loading}
+        className="mb-4 rounded-xl bg-[#8D6E63] text-white py-3 font-semibold disabled:opacity-50">
+        {loading ? "Cargando..." : "Comprar rutina completa"}
+      </button>
+      {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
       <div className="mt-auto pt-5 border-t border-[#D7CCC8]">
         <h4
           className="text-sm font-bold text-[#3E2723] mb-3"

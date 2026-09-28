@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
 
   // NOTE: `precioUSDC` and `tokensGanados` are intentionally NOT read from the
   // request body. Price and reward rate are derived from the Product row below.
-  const { userEmail, productId, paymentAsset, discountCode } = data!;
+  const { userEmail, productId, items, paymentAsset, discountCode } = data!;
 
   try {
     const session = await getServerSession(authOptions);
@@ -232,16 +232,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Authoritative pricing: looked up by id from Prisma, never from the client.
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-    });
-    if (!product) {
-      return NextResponse.json(
-        { error: "Producto no encontrado" },
-        { status: 404 }
-      );
+    // Resolve every line from the catalog; client prices and rewards are ignored.
+    const requestedItems = items ?? [{ id: productId!, quantity: 1 }];
+    const quantities = new Map<string, number>();
+    for (const item of requestedItems) {
+      quantities.set(item.id, (quantities.get(item.id) ?? 0) + item.quantity);
     }
+    const products = await prisma.product.findMany({
+      where: { id: { in: [...quantities.keys()] } },
+    });
+    if (!products.length || products.length !== quantities.size) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+    const lines = products.map(product => ({ product, quantity: quantities.get(product.id)! }));
+    const productName = lines.length === 1 && lines[0].quantity === 1
+      ? lines[0].product.name
+      : lines.map(({ product, quantity }) => `${product.name} x${quantity}`).join(", ");
 
     let discount = null;
     if (discountCode) {
@@ -272,8 +278,8 @@ export async function POST(req: NextRequest) {
       ? await checkDiscount(user.stellarPublicKey)
       : 0;
     const discountPercent = Math.max(loyaltyDiscount, discount?.discount ?? 0);
-    const precioUSDC = product.price * (1 - discountPercent / 100);
-    const tokensGanados = product.tokenPrice;
+    const precioUSDC = lines.reduce((sum, { product, quantity }) => sum + product.price * quantity, 0) * (1 - discountPercent / 100);
+    const tokensGanados = lines.reduce((sum, { product, quantity }) => sum + product.tokenPrice * quantity, 0);
 
     const rizoWallet =
       process.env.NEXT_PUBLIC_RIZO_WALLET_ADDRESS ||
@@ -300,9 +306,16 @@ export async function POST(req: NextRequest) {
       data: {
         userId: user.id,
         walletAddress: user.stellarPublicKey,
-        productName: product.name,
+        productName,
         precioUSDC,
         tokensGanados,
+        items: lines.map(({ product, quantity }) => ({
+          productId: product.id,
+          productName: product.name,
+          quantity,
+          unitPriceUSDC: product.price,
+          unitTokens: product.tokenPrice,
+        })),
         stellarTxHash: null,
         status: "PENDING" satisfies PurchaseStatus,
       },
@@ -338,7 +351,7 @@ export async function POST(req: NextRequest) {
       ({ compra, updatedUser } = await recordCompletedPurchase({
         purchaseId: pending.id,
         userId: user.id,
-        productName: product.name,
+        productName,
         tokensGanados,
         txHash,
         discountCode,
@@ -414,7 +427,7 @@ export async function POST(req: NextRequest) {
     void sendPurchaseConfirmationEmail({
       to: user.email,
       name: user.name ?? "",
-      productName: product.name,
+      productName,
       precioUSDC,
       tokensGanados,
       stellarTxHash: txHash,

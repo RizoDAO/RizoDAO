@@ -45,7 +45,7 @@ function StepBadge({ num, label }: { num: number; label: string }) {
 function QuizResultadoContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const { addItems, count } = useCart() as any;
+  const { addItems, count } = useCart();
 
   const tipo = params.get("tipo") ?? "";
   const [products, setProducts] = useState<Product[]>([]);

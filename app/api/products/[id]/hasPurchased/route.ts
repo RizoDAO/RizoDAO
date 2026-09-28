@@ -31,7 +31,11 @@ export async function GET(
     const purchase = await prisma.purchase.findFirst({
       where: {
         userId: user.id,
-        productName: product.name,
+        status: { in: ["COMPLETED", "completed"] },
+        OR: [
+          { productName: product.name },
+          { items: { array_contains: [{ productId: id }] } },
+        ],
       },
     });
 

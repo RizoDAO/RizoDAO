@@ -8,26 +8,18 @@ import { useCartStore } from "@/store/cartStore";
 
 const MXN_PER_USDC = 19;
 
-type Producto = {
-  id: string;
-  nombre: string;
-  marca: string;
-  precioMXN: number;
-  precioUSDC: number;
-  imagen: string;
-  tokens: number;
-};
-
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { wallet, connect } = useAccesly();
 
-  const cartProducto = useCartStore((state) => state.productoSeleccionado);
+  const items = useCartStore((state) => state.items);
   const setPagoExitoso = useCartStore((state) => state.setPagoExitoso);
   const clearCart = useCartStore((state) => state.clearCart);
 
-  const [producto, setProducto] = useState<Producto | null>(null);
+  const subtotal = items.reduce((sum, item) => sum + item.precioMXN * item.quantity, 0);
+  const totalTokens = items.reduce((sum, item) => sum + item.tokens * item.quantity, 0);
+  const productName = items.map(item => `${item.nombre} x${item.quantity}`).join(", ");
   const [saldoUSDC, setSaldoUSDC] = useState(0);
   const [saldoSimulado, setSaldoSimulado] = useState(0);
   const [pagando, setPagando] = useState(false);
@@ -52,25 +44,15 @@ export default function CheckoutPage() {
 
   // Saldo total en MXN
   const saldoMXN = Math.round(saldoUSDC * MXN_PER_USDC) + saldoSimulado;
-  const precioConDescuento = producto
-    ? Math.round(producto.precioMXN * (1 - descuentoEfectivo / 100))
+  const precioConDescuento = items.length
+    ? Math.round(subtotal * (1 - descuentoEfectivo / 100))
     : 0;
-  const tienesSaldo = producto ? saldoMXN >= precioConDescuento : false;
+  const tienesSaldo = items.length ? saldoMXN >= precioConDescuento : false;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      if (cartProducto) {
-        setProducto(cartProducto);
-      } else {
-        router.replace("/tienda");
-      }
-    }
-  }, [mounted, cartProducto, router]);
 
   // Cargar saldo interno del usuario
   useEffect(() => {
@@ -122,7 +104,7 @@ export default function CheckoutPage() {
   };
 
   const handlePagar = async () => {
-    if (!userEmail || !producto) return;
+    if (!userEmail || !items.length || pagando) return;
     setPagando(true);
     setErrorPago(null);
 
@@ -132,9 +114,7 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userEmail,
-          // The server derives price and reward rate from the Product row;
-          // client-submitted prices are ignored.
-          productId: producto.id,
+          items: items.map(({ id, quantity }) => ({ id, quantity })),
           paymentAsset: "USDC",
           ...(codigoAplicado ? { discountCode: codigoAplicado.code } : {}),
         }),
@@ -150,9 +130,9 @@ export default function CheckoutPage() {
       setPagoExitoso({
         txHash: data.txHash,
         txOnChain: data.txOnChain,
-        producto: producto.nombre,
+        producto: productName,
         precioMXN: precioConDescuento,
-        precioOriginal: producto.precioMXN,
+        precioOriginal: subtotal,
         descuentoAplicado: descuentoEfectivo,
         tokens: data.tokensGanados,
       });
@@ -166,7 +146,11 @@ export default function CheckoutPage() {
     }
   };
 
-  if (!producto) return null;
+  if (!mounted) return null;
+  if (!items.length) return <div className="p-8 text-center">
+    <p>Tu carrito está vacío.</p>
+    <button onClick={() => router.push("/tienda")}>Ir a la tienda</button>
+  </div>;
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
@@ -199,7 +183,7 @@ export default function CheckoutPage() {
           >
             Resumen de compra
           </h3>
-          <div className="flex gap-4">
+          {items.map(producto => <div key={producto.id} className="flex gap-4 mb-4">
             <div className="w-24 h-24 rounded-xl bg-[#EFEBE9] overflow-hidden flex-shrink-0">
               <img
                 src={producto.imagen}
@@ -219,9 +203,9 @@ export default function CheckoutPage() {
               >
                 {producto.nombre}
               </h4>
-              <p className="text-xl font-bold text-[#8D6E63]">${producto.precioMXN} MXN</p>
+              <p className="text-xl font-bold text-[#8D6E63]">${producto.precioMXN * producto.quantity} MXN <span className="text-sm">x{producto.quantity}</span></p>
             </div>
-          </div>
+          </div>)}
         </div>
 
         {/* Puntos que ganará */}
@@ -233,7 +217,7 @@ export default function CheckoutPage() {
                 className="text-2xl font-bold text-[#8D6E63]"
                 style={{ fontFamily: "var(--font-playfair)" }}
               >
-                +{producto.tokens} puntos RIZO
+                +{totalTokens} puntos RIZO
               </p>
               <p className="text-xs text-[#A1887F] mt-0.5">
                 500 puntos = 10% · 1,000 puntos = envio gratis
@@ -335,7 +319,7 @@ export default function CheckoutPage() {
                 <div>
                   <p className="text-xs font-semibold text-amber-700">Saldo insuficiente</p>
                   <p className="text-xs text-amber-600 mt-0.5">
-                    Necesitas ${producto.precioMXN} MXN. Recarga tu saldo para continuar.
+                    Necesitas ${precioConDescuento} MXN. Recarga tu saldo para continuar.
                   </p>
                 </div>
               </div>
@@ -348,7 +332,7 @@ export default function CheckoutPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[#A1887F]">Subtotal</span>
-              <span className="text-sm font-medium text-[#3E2723]">${producto.precioMXN} MXN</span>
+              <span className="text-sm font-medium text-[#3E2723]">${subtotal} MXN</span>
             </div>
             {descuentoEfectivo > 0 && (
               <div className="flex items-center justify-between">
@@ -356,7 +340,7 @@ export default function CheckoutPage() {
                   {fuenteDescuento} ({descuentoEfectivo}%)
                 </span>
                 <span className="text-sm font-medium text-green-600">
-                  -${producto.precioMXN - precioConDescuento} MXN
+                  -${subtotal - precioConDescuento} MXN
                 </span>
               </div>
             )}
@@ -368,7 +352,7 @@ export default function CheckoutPage() {
               <span className="font-semibold text-[#3E2723]">Total</span>
               <div className="text-right">
                 {descuentoEfectivo > 0 && (
-                  <p className="text-xs text-[#A1887F] line-through">${producto.precioMXN} MXN</p>
+                  <p className="text-xs text-[#A1887F] line-through">${subtotal} MXN</p>
                 )}
                 <span
                   className="text-xl font-bold text-[#8D6E63]"

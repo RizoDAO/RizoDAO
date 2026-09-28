@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag, ArrowLeft } from "lucide-react";
 
 export default function CarritoPage() {
-  const { items, removeItem, clear, total, count } = useCart();
+  const { items, removeItem, clear, total, count, updateQuantity } = useCart();
   const router = useRouter();
 
   const totalTokens = items.reduce(
@@ -96,6 +96,10 @@ export default function CarritoPage() {
                       <span className="text-xs text-[#A1887F] ml-1">×{item.quantity}</span>
                     )}
                   </div>
+                  <input type="number" min={1} step={1} value={item.quantity}
+                    aria-label={`Cantidad de ${item.nombre}`}
+                    onChange={event => updateQuantity(item.id, Number(event.target.value))}
+                    className="w-16 border rounded px-2 py-1" />
                   <button
                     onClick={() => removeItem(item.id)}
                     className="text-[#A1887F] hover:text-red-500 transition-colors"
@@ -122,17 +126,14 @@ export default function CarritoPage() {
         </div>
 
         <button
-          onClick={() => {
-            // Checkout handles one product at a time — for now go to tienda
-            router.push("/tienda");
-          }}
+          onClick={() => router.push("/checkout")}
           className="w-full flex items-center justify-center gap-2 bg-[#8D6E63] text-white py-4 rounded-2xl text-base font-semibold hover:bg-[#6D4C41] transition-colors"
         >
           <ShoppingBag className="w-5 h-5" />
-          Ir a la tienda a comprar
+          Continuar al pago
         </button>
         <p className="text-xs text-center text-[#A1887F] mt-3">
-          Selecciona cada producto en la tienda para completar tu compra
+          Revisa todos tus productos antes de confirmar tu compra
         </p>
       </div>
     </div>

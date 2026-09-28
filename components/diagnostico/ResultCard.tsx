@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { useCartStore, catalogToCart } from "@/store/cartStore";
+
 export type CurlProfile = {
   hairType: string;
   porosity: string;
@@ -56,16 +58,7 @@ export default function ResultCard({ profile, products, onRetake }: Props) {
   const porosityTip = POROSITY_TIPS[profile.porosity] ?? "";
 
   const handleProductClick = (product: ProductResult) => {
-    const checkout = {
-      id: product.id,
-      nombre: product.name,
-      marca: product.brandName,
-      precioUSDC: product.price,
-      precioMXN: Math.round(product.price * MXN_PER_USDC),
-      imagen: product.imageUrl ?? "",
-      tokens: product.tokenPrice,
-    };
-    sessionStorage.setItem("productoSeleccionado", JSON.stringify(checkout));
+    useCartStore.getState().addItem(catalogToCart(product));
     router.push("/checkout");
   };
 
@@ -208,6 +201,14 @@ export default function ResultCard({ profile, products, onRetake }: Props) {
         )}
       </div>
 
+      {products.length > 0 && (
+        <button onClick={() => {
+          useCartStore.getState().addItems(products.map(catalogToCart));
+          router.push("/carrito");
+        }} className="w-full py-3 rounded-2xl bg-[#8D6E63] text-white font-semibold">
+          Comprar rutina completa
+        </button>
+      )}
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3 pb-8">
         <button

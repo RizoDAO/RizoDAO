@@ -5,7 +5,7 @@ import { useAccesly } from "accesly";
 import AuthModal from "@/components/layout/AuthModal";
 import { useSession, signOut } from "next-auth/react";
 import { ShoppingCart } from "lucide-react";
-import { useCartStore, type CartItem } from "@/store/cartStore";
+import { useCartStore } from "@/store/cartStore";
 
 const linksBase = [
   { label: "Comunidad", href: "/comunidad" },
@@ -33,7 +33,7 @@ export default function Navbar() {
     || "U";
   const cartCount = useCartStore(
     (state) =>
-      (state as typeof state & { items?: CartItem[] }).items?.length ?? 0
+      state.items.reduce((sum, item) => sum + item.quantity, 0)
   );
 
   const handleDesconectar = () => {
