@@ -22,7 +22,9 @@ export type ResultadoPago = {
   precioUSDC?: number;
 };
 
-export type CartItem = ProductoCheckout & { quantity: number };
+export interface CartItem extends ProductoCheckout {
+  quantity: number;
+}
 export type CartInput = ProductoCheckout & { quantity?: number };
 
 export function catalogToCart(product: {
@@ -44,7 +46,7 @@ function mergeItems(items: CartItem[], incoming: CartInput[]): CartItem[] {
   return [...merged.values()];
 }
 
-interface CartState {
+export interface CartStore {
   items: CartItem[];
   pagoExitoso: ResultadoPago | null;
   addItem: (item: CartInput) => void;
@@ -55,7 +57,7 @@ interface CartState {
   setPagoExitoso: (resultado: ResultadoPago | null) => void;
 }
 
-export const useCartStore = create<CartState>()(
+export const useCartStore = create<CartStore>()(
   persist((set) => ({
     items: [],
     pagoExitoso: null,
@@ -87,7 +89,6 @@ if (typeof window !== "undefined") {
     if (event.key === "cart-storage" || event.key === null) useCartStore.persist.rehydrate();
   });
 }
-
 export function useCart() {
   const store = useCartStore();
   return { ...store, clear: store.clearCart,

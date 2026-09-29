@@ -11,6 +11,11 @@ testutils = ["soroban-sdk/testutils"]
 
 [dependencies]
 soroban-sdk = { version = "25" }
+# Pin ethnum (transitive dependency of soroban-env-common) to a release that
+# compiles on modern toolchains. ethnum <= 1.5.2 fails with E0512
+# (`mem::transmute(())` -> `TryFromIntError`) on Rust >= 1.97 because
+# TryFromIntError changed size. See https://github.com/nlordell/ethnum-rs/issues/58
+ethnum = "1.5.3"
 
 [dev-dependencies]
 soroban-sdk = { version = "25", features = ["testutils"] }

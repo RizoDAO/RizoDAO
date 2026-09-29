@@ -106,7 +106,7 @@ export async function consultarBalanceRIZO(
   try {
     const account = await server.loadAccount(publicKey);
     const balance = account.balances.find(
-      (b: any) =>
+      (b: { asset_type: string; asset_code?: string; balance: string }) =>
         b.asset_type !== "native" &&
         b.asset_code === (process.env.STELLAR_ASSET_CODE || "RIZO")
     );

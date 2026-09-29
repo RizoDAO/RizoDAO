@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     // Si viene hairType por query param, filtrar en memoria por compatibilidad
     const filtered = hairTypeParam
-      ? products.filter((p: any) => {
+      ? products.filter((p) => {
           if (!p.hairTypes) return false;
           return p.hairTypes
             .split(",")
